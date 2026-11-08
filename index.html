@@ -28,6 +28,12 @@ for (let i = 0; i < N; i++) {
   parts.push({ x: Math.random() * w, y: Math.random() * h, vx: 0, vy: 0 });
 }
 
+const mouse = { x: -9999, y: -9999, down: false };
+window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+window.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
+window.addEventListener('mousedown', () => { mouse.down = true; });
+window.addEventListener('mouseup', () => { mouse.down = false; });
+
 function flowAngle(x, y, t) {
   const s = 0.0016;
   return (Math.sin(x * s + t) + Math.cos(y * s + t * 0.7) + Math.sin((x + y) * s * 0.6)) * Math.PI;
@@ -37,15 +43,30 @@ function frame(t) {
   ctx.fillStyle = 'rgba(5, 6, 10, 0.08)';
   ctx.fillRect(0, 0, w, h);
   const tt = t * 0.0004;
+  const R = 180;
   for (const p of parts) {
-    const a = flowAngle(p.x, p.y, tt);
-    p.vx = Math.cos(a) * 1.6;
-    p.vy = Math.sin(a) * 1.6;
+    let a = flowAngle(p.x, p.y, tt);
+    const dx = p.x - mouse.x;
+    const dy = p.y - mouse.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < R * R) {
+      const d = Math.sqrt(d2) || 1;
+      const force = (1 - d / R);
+      // swirl around mouse, direction flips when pressed
+      const swirl = mouse.down ? -1 : 1;
+      a += Math.atan2(dy, dx) * swirl * force * 1.6;
+      // gentle pull when not pressed, push when pressed
+      const pull = (mouse.down ? -1 : 0.5) * force;
+      p.vx += (dx / d) * pull;
+      p.vy += (dy / d) * pull;
+    }
+    p.vx = p.vx * 0.9 + Math.cos(a) * 1.6;
+    p.vy = p.vy * 0.9 + Math.sin(a) * 1.6;
     p.x += p.vx;
     p.y += p.vy;
     if (p.x < 0) p.x = w; else if (p.x > w) p.x = 0;
     if (p.y < 0) p.y = h; else if (p.y > h) p.y = 0;
-    ctx.fillStyle = 'rgba(150, 180, 255, 0.5)';
+    ctx.fillStyle = 'rgba(150, 180, 255, 0.55)';
     ctx.fillRect(p.x, p.y, 1.4, 1.4);
   }
   requestAnimationFrame(frame);
