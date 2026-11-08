@@ -22,10 +22,10 @@ function resize() {
 resize();
 window.addEventListener('resize', resize);
 
-const N = 700;
+const N = 850;
 const parts = [];
 for (let i = 0; i < N; i++) {
-  parts.push({ x: Math.random() * w, y: Math.random() * h, vx: 0, vy: 0 });
+  parts.push({ x: Math.random() * w, y: Math.random() * h, vx: 0, vy: 0, life: Math.random() * 200 });
 }
 
 const mouse = { x: -9999, y: -9999, down: false };
@@ -40,10 +40,12 @@ function flowAngle(x, y, t) {
 }
 
 function frame(t) {
-  ctx.fillStyle = 'rgba(5, 6, 10, 0.08)';
+  ctx.fillStyle = 'rgba(5, 6, 10, 0.06)';
   ctx.fillRect(0, 0, w, h);
   const tt = t * 0.0004;
-  const R = 180;
+  const hueBase = (t * 0.02) % 360;
+  const R = 190;
+  ctx.shadowBlur = 8;
   for (const p of parts) {
     let a = flowAngle(p.x, p.y, tt);
     const dx = p.x - mouse.x;
@@ -52,23 +54,28 @@ function frame(t) {
     if (d2 < R * R) {
       const d = Math.sqrt(d2) || 1;
       const force = (1 - d / R);
-      // swirl around mouse, direction flips when pressed
       const swirl = mouse.down ? -1 : 1;
       a += Math.atan2(dy, dx) * swirl * force * 1.6;
-      // gentle pull when not pressed, push when pressed
       const pull = (mouse.down ? -1 : 0.5) * force;
       p.vx += (dx / d) * pull;
       p.vy += (dy / d) * pull;
     }
-    p.vx = p.vx * 0.9 + Math.cos(a) * 1.6;
-    p.vy = p.vy * 0.9 + Math.sin(a) * 1.6;
+    p.vx = p.vx * 0.9 + Math.cos(a) * 1.7;
+    p.vy = p.vy * 0.9 + Math.sin(a) * 1.7;
     p.x += p.vx;
     p.y += p.vy;
+    p.life++;
     if (p.x < 0) p.x = w; else if (p.x > w) p.x = 0;
     if (p.y < 0) p.y = h; else if (p.y > h) p.y = 0;
-    ctx.fillStyle = 'rgba(150, 180, 255, 0.55)';
-    ctx.fillRect(p.x, p.y, 1.4, 1.4);
+    if (p.life > 240) { p.x = Math.random() * w; p.y = Math.random() * h; p.life = 0; }
+    const hue = (hueBase + (p.x + p.y) * 0.05) % 360;
+    const sat = 90;
+    const light = 60;
+    ctx.fillStyle = 'hsla(' + hue.toFixed(0) + ',' + sat + '%,' + light + '%,0.7)';
+    ctx.shadowColor = ctx.fillStyle;
+    ctx.fillRect(p.x, p.y, 1.6, 1.6);
   }
+  ctx.shadowBlur = 0;
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
